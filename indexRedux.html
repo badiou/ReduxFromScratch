@@ -144,7 +144,7 @@
             //     return store.dispatch(action)
             // }
 
-            //######################################################################
+            //#########################Le middleware checher permet d'éviter que le mot bitcoin ne soit ajouté #############################################
             //ceci est l'ecriture traditionnelle du Middleware
             // function checker(store){
             //     return function (next){
@@ -166,19 +166,31 @@
             // }
             //######################################################################
             //Avec ES6 l'ecriture du middleware se presentera de cette maniere
-            const checker=(store)=>(next)=>(action)=>{
-                if(action.type===ADD_TODO
-                        && action.todo.name.toLowerCase().includes('bitcoin')
-                        ){
-                            return alert('Non. ceci est une mauvaise idée')
-                        }
-                        if(action.type===ADD_GOAL
-                        && action.goal.name.toLowerCase().includes('bitcoin')
-                        ){
-                            return alert('Non. ceci est une mauvaise idée')
-                        }
-                        return next(action)
+            // const checker=(store)=>(next)=>(action)=>{
+            //     if(action.type===ADD_TODO
+            //             && action.todo.name.toLowerCase().includes('bitcoin')
+            //             ){
+            //                 return alert('Non. ceci est une mauvaise idée')
+            //             }
+            //             if(action.type===ADD_GOAL
+            //             && action.goal.name.toLowerCase().includes('bitcoin')
+            //             ){
+            //                 return alert('Non. ceci est une mauvaise idée')
+            //             }
+            //             return next(action)
                         
+            // }
+            //######################Exmple de middleware qui affiche un message lorsqu'un element est ajouté ######################
+            const checker = (store) => (next) => (action) => {
+                if (action.type === ADD_TODO) {
+                    alert(`Don't forget to  ${action.todo.name}!`)
+                }
+
+                if (action.type === ADD_GOAL) {
+                    alert("That's a great goal!")
+                }
+
+                return next(action)
             }
             const logger = (store) => (next) => (action) => {
                 console.group(action.type)
