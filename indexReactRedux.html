@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Udacity Todos Goals</title>
+        <!-- ce script est ajouté dans le head. il constitue en fait le lien vers l'API de Redux -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/redux/3.7.2/redux.min.js"></script>
+    </head>
+    <body>
+        <div>
+            <h1>Todo List</h1>
+            <input id='todo' type='text' placeholder='Add Todo' />
+            <button id='todoBtn'>Add Todo</button>
+            <ul id='todos'></ul>
+        </div>
+        <div>
+            <h1>Goals</h1>
+            <input id='goal' type='text' placeholder='Add Goal' />
+            <button id='goalBtn'>Add Goal</button>
+            <ul id='goals'></ul>
+        </div>
+        <script type='text/javascript'>
+
+            function generateId(){
+                return Math.random().toString(36).substring(2)+(new Date()).getTime().toString(36)
+            }
+            // Library Code
+            function createStore (reducer) { //pass reducer as parameters
+                // The store should have four parts
+                // 1. The state
+                // 2. Get the state.
+                // 3. Listen to changes on the state.
+                // 4. Update the state
+                
+                // 1. The state
+                let state
+                let listeners = []
+
+                // 2. Get the state.
+                const getState = () => state
+                
+                // 3. Listen to changes on the state.
+                const subscribe = (listener) => {
+                listeners.push(listener)
+                return () => {
+                    listeners = listeners.filter((l) => l !== listener)
+                }
+                }
+                // 4. Update the state
+                const dispatch = (action) => {
+                state = reducer(state, action)
+                listeners.forEach((listener) => listener())
+                }
+            
+                return {
+                getState,
+                subscribe,
+                dispatch,
+                }
+            }
+            
+            // App Code
+            const ADD_TODO = 'ADD_TODO'
+            const REMOVE_TODO = 'REMOVE_TODO'
+            const TOGGLE_TODO = 'TOGGLE_TODO'
+            const ADD_GOAL = 'ADD_GOAL'
+            const REMOVE_GOAL = 'REMOVE_GOAL'
+            //ces fonction pemettent de ne pas passer en dur les actions à dispatch en utilsiant store.dispatch en bas
+            function addTodoAction(todo){
+                return {
+                    type:ADD_TODO,
+                    todo,
+                }
+            }
+            function removeTodoAction(id){
+                return{
+                    type: REMOVE_TODO,
+                    id,
+                }
+            }
+            function toggleTodoAction(id){
+                return{
+                    type: TOGGLE_TODO,
+                    id,
+                }
+            }
+            function addGoalAction(goal){
+                return {
+                    type:ADD_GOAL,
+                    goal,
+                }
+            }
+            function removeGoalAction(id){
+                return{
+                    type: REMOVE_GOAL,
+                    id,
+                }
+            }
+            //reducer code
+            function todos (state = [], action) {
+                switch(action.type) {
+                case ADD_TODO :
+                    return state.concat([action.todo])
+                case REMOVE_TODO :
+                    return state.filter((todo) => todo.id !== action.id)
+                case TOGGLE_TODO :
+                    return state.map((todo) => todo.id !== action.id ? todo :
+                    Object.assign({}, todo, { complete: !todo.complete }))
+                default :
+                    return state
+                }
+            }
+
+            function goals(state=[],action){
+                switch(action.type){
+                    case ADD_GOAL:
+                        return state.concat([action.goal])
+                    case REMOVE_GOAL:
+                        return state.filter((goal)=>goal.id!==action.id)
+                    default:
+                        return state
+                }
+            }
+            // function app (state = {},action){
+            //     return {
+            //         //ici on appelle les 2 reducer
+            //         todos:todos(state.todos,action),
+            //         goals:goals(state.goals,action)
+            //     }
+            // }
+
+            //Middleware qui affiche une boite de dualogue lorsque le mot bitcoin est tapé
+            //Ce middleware est l'ancien middleware utilisé. le nouveau se trouve juste en bas
+            // function checkAndDispatch(store,action){
+            //     if(action.type===ADD_TODO
+            //     && action.todo.name.toLowerCase().includes('bitcoin')
+            //     ){
+            //         return alert('Non. ceci est une mauvaise idée')
+            //     }
+            //     if(action.type===ADD_GOAL
+            //     && action.goal.name.toLowerCase().includes('bitcoin')
+            //     ){
+            //         return alert('Non. ceci est une mauvaise idée')
+            //     }
+            //     return store.dispatch(action)
+            // }
+
+            //#########################Le middleware checher permet d'éviter que le mot bitcoin ne soit ajouté #############################################
+            //ceci est l'ecriture traditionnelle du Middleware
+            // function checker(store){
+            //     return function (next){
+            //         return function (action){
+            //             if(action.type===ADD_TODO
+            //             && action.todo.name.toLowerCase().includes('bitcoin')
+            //             ){
+            //                 return alert('Non. ceci est une mauvaise idée')
+            //             }
+            //             if(action.type===ADD_GOAL
+            //             && action.goal.name.toLowerCase().includes('bitcoin')
+            //             ){
+            //                 return alert('Non. ceci est une mauvaise idée')
+            //             }
+            //             return next(action)
+            //             //return store.dispatch(action)
+            //         }
+            //     }
+            // }
+            //######################################################################
+            //Avec ES6 l'ecriture du middleware se presentera de cette maniere
+            // const checker=(store)=>(next)=>(action)=>{
+            //     if(action.type===ADD_TODO
+            //             && action.todo.name.toLowerCase().includes('bitcoin')
+            //             ){
+            //                 return alert('Non. ceci est une mauvaise idée')
+            //             }
+            //             if(action.type===ADD_GOAL
+            //             && action.goal.name.toLowerCase().includes('bitcoin')
+            //             ){
+            //                 return alert('Non. ceci est une mauvaise idée')
+            //             }
+            //             return next(action)
+                        
+            // }
+            //######################Exmple de middleware qui affiche un message lorsqu'un element est ajouté ######################
+            const checker = (store) => (next) => (action) => {
+                if (action.type === ADD_TODO) {
+                    alert(`Don't forget to  ${action.todo.name}!`)
+                }
+
+                if (action.type === ADD_GOAL) {
+                    alert("That's a great goal!")
+                }
+
+                return next(action)
+            }
+            const logger = (store) => (next) => (action) => {
+                console.group(action.type)
+                    console.log('The action: ', action)
+                    const result = next(action)
+                    console.log('The new state: ', store.getState())
+                console.groupEnd()
+                return result
+            }
+            //######################################################################
+            // Au lieu d'utiliser cette fonction app en haut qui permettra de faire appel au 2 reducer, nous allons plûtot utiliser le la focntion CombineReducer de Redux.
+            
+            const store=Redux.createStore(Redux.combineReducers({
+                todos,
+                goals,
+            }), // si on passe un second middleware logger en plus du premier checker on aura
+            Redux.applyMiddleware(checker,logger))
+            //avec seulement le middleware checker
+            //Redux.applyMiddleware(checker))
+           
+            //######################################################################
+            //on appelle ici le reducer app puisqu'on ne peut pas passser en parametre 2 reducer
+            //donc on fait une seule fonction app
+            // const store = createStore(app) 
+            //const store = Redux.createStore(app) // ici on met Redux.createStore puisqu'on va se basé sur le script ajouté dans le head
+
+            store.subscribe(()=>{
+                console.log('The new state is:', store.getState())
+                const {goals,todos}=store.getState()
+                //cette ligne qui suit évite que lorsqu'on ajoute todos et apres goal que todos vienne en double et vice versa
+                document.getElementById('goals').innerHTML=''
+                document.getElementById('todos').innerHTML=''
+
+                todos.forEach(addTodoToDOM)
+                goals.forEach(addGoalToDOM)
+            })
+            //ce bout de code est remplacé par le bout de code ci-dessous
+
+            //   store.dispatch({
+            //       type:ADD_TODO,
+            //       todo:{
+            //           id:0,
+            //           name:'Learn Redux',
+            //           complete:false
+            //       }
+            //   })
+            // store.dispatch(addTodoAction({
+            //     id: 0,
+            //     name: 'Walk the dog',
+            //     complete: false,
+            // }))
+            
+            // store.dispatch(addTodoAction({
+            //     id: 1,
+            //     name: 'Wash the car',
+            //     complete: false,
+            // }))
+            
+            // store.dispatch(addTodoAction({
+            //     id: 2,
+            //     name: 'Go to the gym',
+            //     complete: true,
+            // }))
+            
+            // store.dispatch(removeTodoAction(1))
+            
+            // store.dispatch(toggleTodoAction(0))
+            
+            // store.dispatch(addGoalAction({
+            //     id: 0,
+            //     name: 'Learn Redux'
+            // }))
+            
+            // store.dispatch(addGoalAction({
+            //     id: 1,
+            //     name: 'Lose 20 pounds'
+            // }))
+            
+            // store.dispatch(removeGoalAction(0))
+            function addTodo(){
+                const input=document.getElementById('todo')
+                const name=input.value
+                input.value=''
+                 //avec le middleware checker
+                store.dispatch(addTodoAction({
+                    name,
+                    complete:false,
+                    id:generateId() // on utilise une fonction déclarée plus haut pour qui génere un id aléatoire
+                }))
+                //avec le middleware checkAndDispatch 
+                // checkAndDispatch(store, addTodoAction({
+                //     name,
+                //     complete: false,
+                //     id: generateId()
+                // }))
+               
+                //sans le middleware
+                // store.dispatch(addTodoAction({
+                //     name,
+                //     complete:false,
+                //     id:generateId() // on utilise une fonction déclarée plus haut pour qui génere un id aléatoire
+                // }))
+                
+            }
+            function addGoal(){
+                const input=document.getElementById('goal')
+                const name=input.value
+                input.value=''
+                //avec le middleware checker
+                store.dispatch(addGoalAction({
+                    name,
+                    id:generateId() // on utilise une fonction déclarée plus haut pour qui génere un id aléatoire
+                }))
+                //avec le middleware checkAndDispatch
+                // checkAndDispatch(store, addGoalAction({
+                //     name,
+                //     id: generateId()
+                // }))
+                //sans le middleware
+                // store.dispatch(addGoalAction({
+                //     name,
+                //     id:generateId() // on utilise une fonction déclarée plus haut pour qui génere un id aléatoire
+                // }))
+
+                
+                
+            }
+            false
+            document.getElementById('todoBtn')
+            .addEventListener('click', addTodo)
+
+            document.getElementById('goalBtn')
+            .addEventListener('click', addGoal)
+
+            //ces fonctions permettent d'ajouter dans la liste
+            //cette fonction permet de créer le bouton X de suppression
+            function createRemoveButton(onClick){
+                //creation du button X
+                const removeBtn=document.createElement('button')
+                removeBtn.innerHTML='X'
+                //ajout de l'evenement click sur le bouton X
+                removeBtn.addEventListener('click',onClick)
+                return removeBtn
+            }
+            function addTodoToDOM(todo){
+                //creer le li
+                const node=document.createElement('li')
+                //creer le text
+                const text=document.createTextNode(todo.name)
+
+                //ici on va créer le bouton de suppression juste au moment où on ajoute aussi le texte
+                const removeBtn=createRemoveButton(()=>{
+                    //avec le middleware checher
+                    store.dispatch(removeTodoAction(todo.id))
+                    //sans le middleware
+                    // store.dispatch(removeTodoAction(todo.id))
+                    //avec le middleware checkAndDispatch
+                    // checkAndDispatch(store,removeTodoAction(todo.id))
+                    })
+                    
+               
+                //ajouter le text à coté du li
+                node.appendChild(text)
+                //Après avoir ajouter le text on va aussi ajouter le bouton supprimé X à côté du texte
+                node.appendChild(removeBtn)
+
+                node.style.textDecoration=todo.complete?'line-through':'none'
+                //cette ligne lance l'action lanflase pu truece le toggleTodoAction et lui il change le complete à 
+                node.addEventListener('click',()=>{
+                    //avec le middleware checker
+                    store.dispatch(toggleTodoAction(todo.id))
+                    //sans le middleware
+                   // store.dispatch(toggleTodoAction(todo.id))
+                   // avec le middleware
+                   //avec le middleware checkAndDispatch
+                   //checkAndDispatch(store,toggleTodoAction(todo.id))
+                })
+                //ajouter le tout au niveau de ul
+                document.getElementById("todos").appendChild(node);
+            }
+            function addGoalToDOM(goal){
+                //creer le li
+                const node=document.createElement('li')
+                //creer le text
+                const text=document.createTextNode(goal.name)
+                 //ici on va créer le bouton de suppression juste au moment où on ajoute aussi le texte
+                const removeBtn=createRemoveButton(()=>{
+                    //avec le middleware checher
+                    store.dispatch(removeGoalAction(goal.id))
+                    //sans le middleware
+                    //store.dispatch(removeGoalAction(goal.id))
+                    //avec le middleware checkAndDispatch
+                    //checkAndDispatch(store,removeGoalAction(goal.id))
+                })
+                //ajouter le text à coté du li
+                node.appendChild(text)
+                //Après avoir ajouter le text on va aussi ajouter le bouton supprimé X à côté du texte
+                node.appendChild(removeBtn)
+                //ajouter le tout au niveau de ul
+                document.getElementById("goals").appendChild(node);
+            }
+        </script>
+    </body>
+</html>
+</html>
