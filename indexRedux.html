@@ -120,17 +120,91 @@
                         return state
                 }
             }
-            function app (state = {},action){
-                return {
-                    //ici on appelle les 2 reducer
-                    todos:todos(state.todos,action),
-                    goals:goals(state.goals,action)
-                }
-            }
+            // function app (state = {},action){
+            //     return {
+            //         //ici on appelle les 2 reducer
+            //         todos:todos(state.todos,action),
+            //         goals:goals(state.goals,action)
+            //     }
+            // }
 
+            //Middleware qui affiche une boite de dualogue lorsque le mot bitcoin est tapé
+            //Ce middleware est l'ancien middleware utilisé. le nouveau se trouve juste en bas
+            // function checkAndDispatch(store,action){
+            //     if(action.type===ADD_TODO
+            //     && action.todo.name.toLowerCase().includes('bitcoin')
+            //     ){
+            //         return alert('Non. ceci est une mauvaise idée')
+            //     }
+            //     if(action.type===ADD_GOAL
+            //     && action.goal.name.toLowerCase().includes('bitcoin')
+            //     ){
+            //         return alert('Non. ceci est une mauvaise idée')
+            //     }
+            //     return store.dispatch(action)
+            // }
+
+            //######################################################################
+            //ceci est l'ecriture traditionnelle du Middleware
+            // function checker(store){
+            //     return function (next){
+            //         return function (action){
+            //             if(action.type===ADD_TODO
+            //             && action.todo.name.toLowerCase().includes('bitcoin')
+            //             ){
+            //                 return alert('Non. ceci est une mauvaise idée')
+            //             }
+            //             if(action.type===ADD_GOAL
+            //             && action.goal.name.toLowerCase().includes('bitcoin')
+            //             ){
+            //                 return alert('Non. ceci est une mauvaise idée')
+            //             }
+            //             return next(action)
+            //             //return store.dispatch(action)
+            //         }
+            //     }
+            // }
+            //######################################################################
+            //Avec ES6 l'ecriture du middleware se presentera de cette maniere
+            const checker=(store)=>(next)=>(action)=>{
+                if(action.type===ADD_TODO
+                        && action.todo.name.toLowerCase().includes('bitcoin')
+                        ){
+                            return alert('Non. ceci est une mauvaise idée')
+                        }
+                        if(action.type===ADD_GOAL
+                        && action.goal.name.toLowerCase().includes('bitcoin')
+                        ){
+                            return alert('Non. ceci est une mauvaise idée')
+                        }
+                        return next(action)
+                        
+            }
+            const logger = (store) => (next) => (action) => {
+                console.group(action.type)
+                    console.log('The action: ', action)
+                    const result = next(action)
+                    console.log('The new state: ', store.getState())
+                console.groupEnd()
+                return result
+            }
+            //######################################################################
+            // Au lieu d'utiliser cette fonction app en haut qui permettra de faire appel au 2 reducer, nous allons plûtot utiliser le la focntion CombineReducer de Redux.
+            
+            const store=Redux.createStore(Redux.combineReducers({
+                todos,
+                goals,
+            }), // si on passe un second middleware logger en plus du premier checker on aura
+            Redux.applyMiddleware(checker,logger))
+            //avec seulement le middleware checker
+            //Redux.applyMiddleware(checker))
+           
+            //######################################################################
             //on appelle ici le reducer app puisqu'on ne peut pas passser en parametre 2 reducer
             //donc on fait une seule fonction app
-            const store = createStore(app)
+            // const store = createStore(app) 
+            //const store = Redux.createStore(app) // ici on met Redux.createStore puisqu'on va se basé sur le script ajouté dans le head
+
             store.subscribe(()=>{
                 console.log('The new state is:', store.getState())
                 const {goals,todos}=store.getState()
@@ -188,21 +262,48 @@
                 const input=document.getElementById('todo')
                 const name=input.value
                 input.value=''
+                 //avec le middleware checker
                 store.dispatch(addTodoAction({
                     name,
                     complete:false,
                     id:generateId() // on utilise une fonction déclarée plus haut pour qui génere un id aléatoire
                 }))
+                //avec le middleware checkAndDispatch 
+                // checkAndDispatch(store, addTodoAction({
+                //     name,
+                //     complete: false,
+                //     id: generateId()
+                // }))
+               
+                //sans le middleware
+                // store.dispatch(addTodoAction({
+                //     name,
+                //     complete:false,
+                //     id:generateId() // on utilise une fonction déclarée plus haut pour qui génere un id aléatoire
+                // }))
                 
             }
             function addGoal(){
                 const input=document.getElementById('goal')
                 const name=input.value
                 input.value=''
+                //avec le middleware checker
                 store.dispatch(addGoalAction({
                     name,
                     id:generateId() // on utilise une fonction déclarée plus haut pour qui génere un id aléatoire
                 }))
+                //avec le middleware checkAndDispatch
+                // checkAndDispatch(store, addGoalAction({
+                //     name,
+                //     id: generateId()
+                // }))
+                //sans le middleware
+                // store.dispatch(addGoalAction({
+                //     name,
+                //     id:generateId() // on utilise une fonction déclarée plus haut pour qui génere un id aléatoire
+                // }))
+
+                
                 
             }
             false
@@ -230,8 +331,15 @@
 
                 //ici on va créer le bouton de suppression juste au moment où on ajoute aussi le texte
                 const removeBtn=createRemoveButton(()=>{
+                    //avec le middleware checher
                     store.dispatch(removeTodoAction(todo.id))
-                })
+                    //sans le middleware
+                    // store.dispatch(removeTodoAction(todo.id))
+                    //avec le middleware checkAndDispatch
+                    // checkAndDispatch(store,removeTodoAction(todo.id))
+                    })
+                    
+               
                 //ajouter le text à coté du li
                 node.appendChild(text)
                 //Après avoir ajouter le text on va aussi ajouter le bouton supprimé X à côté du texte
@@ -240,7 +348,13 @@
                 node.style.textDecoration=todo.complete?'line-through':'none'
                 //cette ligne lance l'action lanflase pu truece le toggleTodoAction et lui il change le complete à 
                 node.addEventListener('click',()=>{
+                    //avec le middleware checker
                     store.dispatch(toggleTodoAction(todo.id))
+                    //sans le middleware
+                   // store.dispatch(toggleTodoAction(todo.id))
+                   // avec le middleware
+                   //avec le middleware checkAndDispatch
+                   //checkAndDispatch(store,toggleTodoAction(todo.id))
                 })
                 //ajouter le tout au niveau de ul
                 document.getElementById("todos").appendChild(node);
@@ -252,7 +366,12 @@
                 const text=document.createTextNode(goal.name)
                  //ici on va créer le bouton de suppression juste au moment où on ajoute aussi le texte
                 const removeBtn=createRemoveButton(()=>{
+                    //avec le middleware checher
                     store.dispatch(removeGoalAction(goal.id))
+                    //sans le middleware
+                    //store.dispatch(removeGoalAction(goal.id))
+                    //avec le middleware checkAndDispatch
+                    //checkAndDispatch(store,removeGoalAction(goal.id))
                 })
                 //ajouter le text à coté du li
                 node.appendChild(text)
