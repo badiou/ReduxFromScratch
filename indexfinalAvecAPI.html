@@ -164,20 +164,51 @@
     class Todos extends React.Component {
       addItem = (e) => {
         e.preventDefault()
-        const name = this.input.value
-        this.input.value = ''
+        //ici on veut faire l'ajout depuis la API
+        return API.saveTodo(this.input.value)
+        .then((todo)=>{
+            //ici on appele la methode addTodoAction
+            this.props.store.dispatch(addTodoAction(todo))
+            //on vide le contenu du champ
+            this.input.value=''
+        })
+        .catch(()=>{
+            alert("Une erreur s'est produite !!!")
+        })
+        // La ligne sous dessous n'est plus utilisée. A la place on fait le return qui contient alors l'appel à l'API
+        // const name = this.input.value
+        // this.input.value = ''
 
-        this.props.store.dispatch(addTodoAction({
-          name,
-          complete: false,
-          id: generateId()
-        }))
+        // this.props.store.dispatch(addTodoAction({
+        //   name,
+        //   complete: false,
+        //   id: generateId()
+        // }))
       }
       removeItem = (todo) => {
+        //ici on fait la technique de la mise à jour optimiste. On fait l'action niveau interface avant de la faire niveau BD
         this.props.store.dispatch(removeTodoAction(todo.id))
+          //on ajoute cette ligne pour pouvoir faire l'action deleteTodo depuis l'API
+          return API.deleteTodo(todo.id)
+        //   .then(()=>{ //on change cette ligne avec
+            .catch(()=>{
+           this.props.store.dispatch(addTodoAction(todo))
+            //si la ligne suivante est conservée c'est qu'on attend la confirmation de la base de données pour pouvoir effectuer cette action
+            //si on veut utiliser la technique de la mise à jour optimiste on mettra l'instruction ci-dessous un peu plus en haut
+            //this.props.store.dispatch(removeTodoAction(todo.id))
+            //on fait ici une alert au cas où il ya une erreur
+            alert("Une erreur s'est produite !!!!")
+          })
+        
+        
       }
       toggleItem = (id) => {
         this.props.store.dispatch(toggleTodoAction(id))
+        return API.saveTodoToggle (todo.id)
+        .catch(()=>{
+            this.props.store.dispatch(toogleTodoAction(id))
+            alert("Une erreur s'est produite !!!")
+        })
       }
       render() {
         return (
@@ -203,17 +234,40 @@
     class Goals extends React.Component {
       addItem = (e) => {
         e.preventDefault()
-        const name = this.input.value
-        this.input.value = ''
+        //ici on veut faire l'ajout depuis la API
+        return API.saveGoal(this.input.value)
+        .then((goal)=>{
+            //ici on appele la methode addTodoAction
+            this.props.store.dispatch(addGoalAction(goal))
+            //on vide le contenu du champ
+            this.input.value=''
+        })
+        .catch(()=>{
+            alert("Une erreur s'est produite !!!")
+        })
+        // const name = this.input.value
+        // this.input.value = ''
 
-        this.props.store.dispatch(addGoalAction({
-          id: generateId(),
-          name,
-        }))
+        // this.props.store.dispatch(addGoalAction({
+        //   id: generateId(),
+        //   name,
+        // }))
       }
       removeItem = (goal) => {
-        this.props.store.dispatch(removeGoalAction(goal.id))
-      }
+       //ici on fait la technique de la mise à jour optimiste. On fait l'action niveau interface avant de la faire niveau BD
+       this.props.store.dispatch(removeGoalAction(goal.id))
+          //on ajoute cette ligne pour pouvoir faire l'action deleteTodo depuis l'API
+          return API.deleteGoal(goal.id)
+        //   .then(()=>{ //on change cette ligne avec
+            .catch(()=>{
+           this.props.store.dispatch(addGoalAction(goal))
+            //si la ligne suivante est conservée c'est qu'on attend la confirmation de la base de données pour pouvoir effectuer cette action
+            //si on veut utiliser la technique de la mise à jour optimiste on mettra l'instruction ci-dessous un peu plus en haut
+            //this.props.store.dispatch(removeTodoAction(todo.id))
+            //on fait ici une alert au cas où il ya une erreur
+            alert("Une erreur s'est produite !!!!")
+        })  
+    }
       render() {
         return (
           <div>
