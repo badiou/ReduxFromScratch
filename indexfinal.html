@@ -6,6 +6,9 @@
   <script src='https://unpkg.com/react@16.3.0-alpha.1/umd/react.development.js'></script>
   <script src='https://unpkg.com/react-dom@16.3.0-alpha.1/umd/react-dom.development.js'></script>
   <script src='https://unpkg.com/babel-standalone@6.15.0/babel.min.js'></script>
+  <!-- Le script si dessous permet d'appeler l'API -->
+  <script src="https://tylermcginnis.com/goals-todos-api/index.js"></script>
+
 </head>
 <body>
   <div id='app'></div>
@@ -21,6 +24,8 @@
     const TOGGLE_TODO = 'TOGGLE_TODO'
     const ADD_GOAL = 'ADD_GOAL'
     const REMOVE_GOAL = 'REMOVE_GOAL'
+    //ajouté pour récupérer depuis l'API
+    const RECEIVE_DATA='RECEIVE_DATA'
 
     function addTodoAction (todo) {
       return {
@@ -56,7 +61,21 @@
         id,
       }
     }
-
+    function receiveDataAction(todos,goals){
+        return{
+            type:RECEIVE_DATA,
+            todos,
+            goals,
+        }
+    }
+    function loading(state=true,action){
+        switch(action.type){
+            case RECEIVE_DATA:
+                return false
+            default:
+                return state
+        }
+    }
     function todos (state = [], action) {
       switch(action.type) {
         case ADD_TODO :
@@ -66,6 +85,9 @@
         case TOGGLE_TODO :
           return state.map((todo) => todo.id !== action.id ? todo :
             Object.assign({}, todo, { complete: !todo.complete }))
+            //le case qui suit est ajouté juste pour pouvoir importer depuis l'API
+        case RECEIVE_DATA:
+            return action.todos
         default :
           return state
       }
@@ -77,6 +99,9 @@
           return state.concat([action.goal])
         case REMOVE_GOAL :
           return state.filter((goal) => goal.id !== action.id)
+        //le case qui suit est ajouté juste pour pouvoir importer depuis l'API
+        case RECEIVE_DATA:
+            return action.goals
         default :
           return state
       }
@@ -112,6 +137,7 @@
     const store = Redux.createStore(Redux.combineReducers({
       todos,
       goals,
+      loading,
     }), Redux.applyMiddleware(checker, logger))
   </script>
 
@@ -211,13 +237,25 @@
     class App extends React.Component {
       componentDidMount () {
         const { store } = this.props
-
+        //ici on va recupérer les donnees lorsque l'application se charge
+        Promise.all([
+            //fetchTodos et fecthGoals proviennent de l'API mis dans le dernier script dans le head
+          API.fetchTodos(),
+          API.fetchGoals()
+        ]).then(([ todos, goals ]) => {
+          console.log('Todos', todos)
+          console.log('Goals', goals)
+          store.dispatch(receiveDataAction(todos,goals))
+        })
+       
         store.subscribe(() => this.forceUpdate())
       }
       render() {
         const { store } = this.props
-        const { todos, goals } = store.getState()
-
+        const { todos, goals,loading } = store.getState()
+        if(loading===true){
+            return <h3>Loading</h3>
+        }
         return (
           <div>
             <Todos todos={todos} store={this.props.store} />
