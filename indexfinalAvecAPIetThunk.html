@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Udacity Todos Goals</title>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/redux/3.7.2/redux.min.js'></script>
+  <script src='https://unpkg.com/react@16.3.0-alpha.1/umd/react.development.js'></script>
+  <script src='https://unpkg.com/react-dom@16.3.0-alpha.1/umd/react-dom.development.js'></script>
+  <script src='https://unpkg.com/babel-standalone@6.15.0/babel.min.js'></script>
+  <!-- Le script si dessous permet d'appeler l'API -->
+  <script src="https://tylermcginnis.com/goals-todos-api/index.js"></script>
+   <!-- Ajout de thunk pour separer la logique UI de l'appel aux API -->
+  <script src="https://unpkg.com/redux-thunk@2.2.0/dist/redux-thunk.min.js"></script>
+</head>
+<body>
+  <div id='app'></div>
+
+  <script type='text/javascript'>
+    function generateId () {
+      return Math.random().toString(36).substring(2) + (new Date()).getTime().toString(36);
+    }
+
+    // App Code
+    const ADD_TODO = 'ADD_TODO'
+    const REMOVE_TODO = 'REMOVE_TODO'
+    const TOGGLE_TODO = 'TOGGLE_TODO'
+    const ADD_GOAL = 'ADD_GOAL'
+    const REMOVE_GOAL = 'REMOVE_GOAL'
+    //ajouté pour récupérer depuis l'API
+    const RECEIVE_DATA='RECEIVE_DATA'
+
+    function addTodoAction (todo) {
+      return {
+        type: ADD_TODO,
+        todo,
+      }
+    }
+
+    function removeTodoAction (id) {
+      return {
+        type: REMOVE_TODO,
+        id,
+      }
+    }
+
+    function toggleTodoAction (id) {
+      return {
+        type: TOGGLE_TODO,
+        id,
+      }
+    }
+
+    function addGoalAction (goal) {
+      return {
+        type: ADD_GOAL,
+        goal,
+      }
+    }
+
+    function removeGoalAction (id) {
+      return {
+        type: REMOVE_GOAL,
+        id,
+      }
+    }
+    function receiveDataAction(todos,goals){
+        return{
+            type:RECEIVE_DATA,
+            todos,
+            goals,
+        }
+    }
+    function handleDeleteGoal(goal){
+      return (dispatch)=>{
+     
+        dispatch(removeGoalAction(goal.id))
+        return API.deleteGoal(goal.id)
+      //   .then(()=>{ //on change cette ligne avec
+          .catch(()=>{
+          dispatch(addGoalAction(goal))
+          //si la ligne suivante est conservée c'est qu'on attend la confirmation de la base de données pour pouvoir effectuer cette action
+          //si on veut utiliser la technique de la mise à jour optimiste on mettra l'instruction ci-dessous un peu plus en haut
+          //this.props.store.dispatch(removeTodoAction(todo.id))
+          //on fait ici une alert au cas où il ya une erreur
+          alert("Une erreur s'est produite !!!!")
+        })
+      }
+    }
+    function handleAddTodo(name,cb){
+        return(dispatch)=>{
+          return API.saveTodo(name)
+        .then((todo)=>{
+            //ici on appele la methode addTodoAction
+            dispatch(addTodoAction(todo))
+            //on vide le contenu du champ
+            //this.input.value=''
+            cb()
+        })
+        .catch(()=>{
+            alert("Une erreur s'est produite !!!")
+        })
+        
+        }
+    }
+    function handleToggle (id) {
+      return (dispatch) => {
+        dispatch(toggleTodoAction(id))
+
+        return API.saveTodoToggle(id)
+          .catch(() => {
+            dispatch(toggleTodoAction(id))
+            alert("Une erreur s'est produite !!!")
+          })
+      }
+    }
+    function handleAddGoal(name,cb){
+      return(dispatch)=>{
+        return API.saveGoal(name)
+        .then((goal)=>{
+            //ici on appele la methode addTodoAction
+            dispatch(addGoalAction(goal))
+            //on vide le contenu du champ
+            //this.input.value=''
+            cb()
+        })
+        .catch(()=>{
+            alert("Une erreur s'est produite !!!")
+        })
+      }
+    }
+    function handleDeleteTodo(todo){
+        return(dispatch)=>{
+           // this.props.store.dispatch(removeTodoAction(todo.id))
+           dispatch(removeTodoAction(todo.id))
+          return API.deleteTodo(todo.id)
+        //   .then(()=>{ //on change cette ligne avec
+            .catch(()=>{
+          // this.props.store.dispatch(addTodoAction(todo))
+            store.dispatch(addTodoAction(todo))
+            //si la ligne suivante est conservée c'est qu'on attend la confirmation de la base de données pour pouvoir effectuer cette action
+            //si on veut utiliser la technique de la mise à jour optimiste on mettra l'instruction ci-dessous un peu plus en haut
+            //this.props.store.dispatch(removeTodoAction(todo.id))
+            //on fait ici une alert au cas où il ya une erreur
+            alert("Une erreur s'est produite !!!!")
+          })
+
+        }     
+    }
+    function loading(state=true,action){
+        switch(action.type){
+            case RECEIVE_DATA:
+                return false
+            default:
+                return state
+        }
+    }
+    function todos (state = [], action) {
+      switch(action.type) {
+        case ADD_TODO :
+          return state.concat([action.todo])
+        case REMOVE_TODO :
+          return state.filter((todo) => todo.id !== action.id)
+        case TOGGLE_TODO :
+          return state.map((todo) => todo.id !== action.id ? todo :
+            Object.assign({}, todo, { complete: !todo.complete }))
+            //le case qui suit est ajouté juste pour pouvoir importer depuis l'API
+        case RECEIVE_DATA:
+            return action.todos
+        default :
+          return state
+      }
+    }
+
+    function goals (state = [], action) {
+      switch(action.type) {
+        case ADD_GOAL :
+          return state.concat([action.goal])
+        case REMOVE_GOAL :
+          return state.filter((goal) => goal.id !== action.id)
+        //le case qui suit est ajouté juste pour pouvoir importer depuis l'API
+        case RECEIVE_DATA:
+            return action.goals
+        default :
+          return state
+      }
+    }
+
+    const checker = (store) => (next) => (action) => {
+      if (
+        action.type === ADD_TODO &&
+        action.todo.name.toLowerCase().includes('bitcoin')
+      ) {
+        return alert("Nope. That's a bad idea.")
+      }
+
+      if (
+        action.type === ADD_GOAL &&
+        action.goal.name.toLowerCase().includes('bitcoin')
+      ) {
+        return alert("Nope. That's a bad idea.")
+      }
+
+      return next(action)
+    }
+
+    // const thunk=(store)=>(next)=>(action)=>{
+    //     if(typeof action ==='function'){
+    //         return action(store.dispatch)
+    //     }
+    //     return next(action)
+    // }
+
+    const logger = (store) => (next) => (action) => {
+      console.group(action.type)
+        console.log('The action: ', action)
+        const result = next(action)
+        console.log('The new state: ', store.getState())
+      console.groupEnd()
+      return result
+    }
+
+    const store = Redux.createStore(Redux.combineReducers({
+      todos,
+      goals,
+      loading,
+    }),Redux.applyMiddleware(ReduxThunk.default, checker, logger)) 
+    //Redux.applyMiddleware(thunk, checker, logger))
+  </script>
+
+  <script type='text/babel'>
+    function List (props) {
+      return (
+        <ul>
+          {props.items.map((item) => (
+            <li key={item.id}>
+              <span
+                onClick={() => props.toggle && props.toggle(item.id)}
+                style={{textDecoration: item.complete ? 'line-through' : 'none'}}>
+                  {item.name}
+              </span>
+              <button onClick={() => props.remove(item)}>
+                X
+              </button>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+
+    class Todos extends React.Component {
+      addItem = (e) => {
+        e.preventDefault()
+        this.props.store.dispatch(handleAddTodo(
+          this.input.value,
+          () => this.input.value = ''
+        ))
+      }
+      removeItem = (todo) => {
+          //Pour separer la logique UI du Data on cré le handleDeleteTodo
+        this.props.store.dispatch(handleDeleteTodo(todo))
+        //ici on fait la technique de la mise à jour optimiste. On fait l'action niveau interface avant de la faire niveau BD
+        // this.props.store.dispatch(removeTodoAction(todo.id))
+        
+        //   return API.deleteTodo(todo.id)
+        // //   .then(()=>{ //on change cette ligne avec
+        //     .catch(()=>{
+        //    this.props.store.dispatch(addTodoAction(todo))
+        //     //si la ligne suivante est conservée c'est qu'on attend la confirmation de la base de données pour pouvoir effectuer cette action
+        //     //si on veut utiliser la technique de la mise à jour optimiste on mettra l'instruction ci-dessous un peu plus en haut
+        //     //this.props.store.dispatch(removeTodoAction(todo.id))
+        //     //on fait ici une alert au cas où il ya une erreur
+        //     alert("Une erreur s'est produite !!!!")
+        //   })
+       
+        
+        
+      }
+      toggleItem = (id) => {
+        this.props.store.dispatch(toggleTodoAction(id))
+        
+      }
+      render() {
+        return (
+          <div>
+            <h1>Todo List</h1>
+            <input
+              type='text'
+              placeholder='Add Todo'
+              ref={(input) => this.input = input}
+            />
+            <button onClick={this.addItem}>Add Todo</button>
+
+            <List
+              toggle={this.toggleItem}
+              items={this.props.todos}
+              remove={this.removeItem}
+            />
+          </div>
+        )
+      }
+    }
+
+    class Goals extends React.Component {
+      addItem = (e) => {
+        e.preventDefault()
+        this.props.store.dispatch(handleAddGoal(
+          this.input.value,
+          () => this.input.value = ''
+        ))
+      }
+      removeItem = (goal) => {
+        this.props.store.dispatch(handleDeleteGoal(goal))
+      }
+      render() {
+        return (
+          <div>
+            <h1>Goals</h1>
+            <input
+              type='text'
+              placeholder='Add Goal'
+              ref={(input) => this.input = input}
+            />
+            <button onClick={this.addItem}>Add Goal</button>
+
+            <List
+              items={this.props.goals}
+              remove={this.removeItem}
+            />
+          </div>
+        )
+      }
+    }
+
+    class App extends React.Component {
+      componentDidMount () {
+        const { store } = this.props
+        //ici on va recupérer les donnees lorsque l'application se charge
+        Promise.all([
+            //fetchTodos et fecthGoals proviennent de l'API mis dans le dernier script dans le head
+          API.fetchTodos(),
+          API.fetchGoals()
+        ]).then(([ todos, goals ]) => {
+          console.log('Todos', todos)
+          console.log('Goals', goals)
+          store.dispatch(receiveDataAction(todos,goals))
+        })
+       
+        store.subscribe(() => this.forceUpdate())
+      }
+      render() {
+        const { store } = this.props
+        const { todos, goals,loading } = store.getState()
+        if(loading===true){
+            return <h3>Loading</h3>
+        }
+        return (
+          <div>
+            <Todos todos={todos} store={this.props.store} />
+            <Goals goals={goals} store={this.props.store} />
+          </div>
+        )
+      }
+    }
+
+    ReactDOM.render(
+      <App store={store}/>,
+      document.getElementById('app')
+    )
+  </script>
+</body>
+</html>
+
